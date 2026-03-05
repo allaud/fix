@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fix-shell"
+version = "0.1.0"
+description = "Terminal tool that auto-corrects commands and understands natural language"
+requires-python = ">=3.9"
+dependencies = [
+    "tomli>=1.0; python_version < '3.11'",
+]
+
+[project.scripts]
+fix = "fix_shell.cli:main"
