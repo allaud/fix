@@ -29,47 +29,45 @@ def _call(provider: str, model: str, prompt: str, system: str) -> str:
         return call_claude(prompt, system=system, model=model)
 
 
-def correct_command(config: dict, failed_cmd: str, stderr: str) -> tuple[str | None, str, int]:
+def correct_command(config, failed_cmd, stderr):
     """Correct a failed command. Returns (corrected_command, provider_used, elapsed_ms)."""
-    section = config["correction"]
-    provider = section.get("provider", "groq")
-    model = section["model"]
+    provider = config["ac_provider"]
+    model = config["ac_model"]
 
     user_msg = f"Failed command: {failed_cmd}"
     if stderr:
         user_msg += f"\nStderr:\n{stderr}"
 
     used = provider
+    used_model = model
     t0 = time.monotonic()
     try:
         result = _call(provider, model, user_msg, CORRECTION_SYSTEM)
     except Exception as primary_err:
         print(f"\033[2m{provider} error: {primary_err}\033[0m")
         used = "claude_code" if provider == "groq" else "groq"
-        fallback_model = "haiku" if used == "claude_code" else "llama-3.3-70b-versatile"
+        used_model = "haiku" if used == "claude_code" else "llama-3.3-70b-versatile"
         try:
-            result = _call(used, fallback_model, user_msg, CORRECTION_SYSTEM)
+            result = _call(used, used_model, user_msg, CORRECTION_SYSTEM)
         except Exception as e:
             elapsed = int((time.monotonic() - t0) * 1000)
             print(f"\033[31mLLM error: {e}\033[0m")
-            return None, "error", elapsed
+            return None, "error", "", elapsed
     elapsed = int((time.monotonic() - t0) * 1000)
 
     if result == "UNKNOWN" or not result:
-        return None, used, elapsed
+        return None, used, used_model, elapsed
 
     result = result.strip("`").strip()
     if "\n" in result:
         result = result.split("\n")[0]
 
-    return result, used, elapsed
+    return result, used, used_model, elapsed
 
 
-def translate_natural_language(config: dict, query: str) -> tuple[str | None, str, int]:
-    """Translate natural language to a shell command. Returns (command, provider_used, elapsed_ms)."""
-    section = config["natural_language"]
-    provider = section.get("provider", "claude_code")
-    model = section["model"]
+def translate_natural_language(config, query):
+    provider = config["nl_provider"]
+    model = config["nl_model"]
 
     system = NL_SYSTEM.format(
         os=platform.system(),
@@ -77,27 +75,26 @@ def translate_natural_language(config: dict, query: str) -> tuple[str | None, st
         cwd=os.getcwd(),
     )
 
-    used = provider
     t0 = time.monotonic()
     try:
         result = _call(provider, model, query, system)
     except Exception as e:
         elapsed = int((time.monotonic() - t0) * 1000)
         print(f"\033[31mLLM error: {e}\033[0m")
-        return None, used, elapsed
+        return None, provider, model, elapsed
     elapsed = int((time.monotonic() - t0) * 1000)
 
     if result == "UNKNOWN" or not result:
-        return None, used, elapsed
+        return None, provider, model, elapsed
 
     result = result.strip("`").strip()
     if "\n" in result:
         result = result.split("\n")[0]
 
-    return result, used, elapsed
+    return result, provider, model, elapsed
 
 
-def run_command(cmd: str) -> tuple[int, str]:
+def run_command(cmd):
     """Run a shell command with stdout on the real TTY, capture only stderr."""
     try:
         result = subprocess.run(

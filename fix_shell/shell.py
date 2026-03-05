@@ -75,28 +75,23 @@ alias '?'='noglob __fix_nl'
 def launch_fix_shell(config: dict):
     fix_bin = shutil.which("fix")
     if not fix_bin:
-        fix_bin = f"{sys.executable} -m fix_shell.cli"
+        # Use fix.py next to the package
+        fix_py = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fix.py")
+        fix_bin = f"{sys.executable} {fix_py}"
 
-    # Build flag string so inner fix calls use the same overrides
-    cor = config["correction"]
-    nl = config["natural_language"]
-
-    groq_key = os.environ.get("GROQ_API_KEY", "")
+    groq_key = config["groq_api_key"]
     key_flag = f' --groq-key "{groq_key}"' if groq_key else ""
 
-    flags = f"-p {cor.get('provider', 'groq')} -m {cor['model']} -t {cor['timeout']}{key_flag}"
-    fix_cmd = f'"{fix_bin}" {flags}'
+    fix_cmd = f'{fix_bin} --ac-provider {config["ac_provider"]} --ac-model {config["ac_model"]} --ac-timeout {config["ac_timeout"]}{key_flag}'
 
-    # For NL calls, build separately (? uses NL settings)
-    nl_flags = f"-p {nl.get('provider', 'claude_code')} -m {nl['model']} -t {nl['timeout']}{key_flag}"
-    fix_nl_cmd = f'"{fix_bin}" {nl_flags}'
+    fix_nl_cmd = f'{fix_bin} --nl-provider {config["nl_provider"]} --nl-model {config["nl_model"]} --nl-timeout {config["nl_timeout"]}{key_flag}'
 
     user_zshrc = os.path.expanduser("~/.zshrc")
 
     tmpdir = tempfile.mkdtemp(prefix="fix_shell_")
     tmp_zshrc = os.path.join(tmpdir, ".zshrc")
 
-    icon = config.get("icon", "\u2726")
+    icon = config["icon"]
 
     with open(tmp_zshrc, "w") as f:
         f.write(FIX_ZSHRC.format(
@@ -112,8 +107,8 @@ def launch_fix_shell(config: dict):
     env.pop("CLAUDECODE", None)
 
     print("\033[2mfix mode \u2014 ? <query> for natural language, exit to leave\033[0m")
-    print(f"\033[2m  correction: {cor.get('provider', 'groq')}/{cor['model']} (timeout: {cor['timeout']}s)\033[0m")
-    print(f"\033[2m  natural lang: {nl.get('provider', 'claude_code')}/{nl['model']} (timeout: {nl['timeout']}s)\033[0m")
+    print(f'\033[2m  autocorrect: {config["ac_provider"]}/{config["ac_model"]} (autoaccept: {config["ac_timeout"]}s)\033[0m')
+    print(f'\033[2m  natural language: {config["nl_provider"]}/{config["nl_model"]} (autoaccept: {config["nl_timeout"]}s)\033[0m')
 
     try:
         result = subprocess.run(
