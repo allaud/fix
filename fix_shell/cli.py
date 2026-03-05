@@ -91,7 +91,9 @@ def run_long_mode(query):
 
     proc = subprocess.Popen(
         ["claude", "-p", "--dangerously-skip-permissions",
-         "--verbose", "--output-format", "stream-json", query],
+         "--verbose", "--output-format", "stream-json",
+         "--system-prompt", "Be concise. Give short, direct answers. No filler, no markdown formatting, no bold text. Just the answer.",
+         query],
         stdout=subprocess.PIPE,
         text=True,
         env=env,
