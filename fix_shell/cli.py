@@ -82,22 +82,20 @@ def apply_overrides(config: dict, args) -> dict:
 
 
 def run_long_mode(query):
-    """Run a full claude code session with a spinner until first output."""
+    """Run claude code in print mode with verbose output (shows tool calls)."""
     import subprocess
-    import threading
 
     env = os.environ.copy()
     env.pop("CLAUDECODE", None)
 
     proc = subprocess.Popen(
-        ["claude", "-p", "--dangerously-skip-permissions", query],
+        ["claude", "-p", "--dangerously-skip-permissions", "--verbose", query],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
         env=env,
     )
 
-    # Show spinner until we get first output
     spinner = Spinner("thinking...")
     spinner.start()
     first_chunk = True
