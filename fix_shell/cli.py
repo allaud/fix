@@ -82,37 +82,66 @@ def apply_overrides(config: dict, args) -> dict:
 
 
 def run_long_mode(query):
-    """Run claude code in print mode with verbose output (shows tool calls)."""
+    """Run claude code with streaming JSON to show tool calls and result."""
+    import json
     import subprocess
 
     env = os.environ.copy()
     env.pop("CLAUDECODE", None)
 
     proc = subprocess.Popen(
-        ["claude", "-p", "--dangerously-skip-permissions", "--verbose", query],
+        ["claude", "-p", "--dangerously-skip-permissions",
+         "--verbose", "--output-format", "stream-json", query],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
         text=True,
         env=env,
     )
 
     spinner = Spinner("thinking...")
     spinner.start()
-    first_chunk = True
+    spinning = True
 
     for line in proc.stdout:
-        if first_chunk:
-            spinner.stop()
-            first_chunk = False
-        print(line, end="")
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
 
-    proc.wait()
-    if first_chunk:
+        etype = event.get("type", "")
+
+        # Show tool calls as they happen
+        if etype == "assistant":
+            for block in event.get("message", {}).get("content", []):
+                if block.get("type") == "tool_use":
+                    if spinning:
+                        spinner.stop()
+                        spinning = False
+                    name = block.get("name", "")
+                    inp = block.get("input", {})
+                    detail = inp.get("command", "") or inp.get("file_path", "") or inp.get("pattern", "")
+                    if len(detail) > 60:
+                        detail = detail[:57] + "..."
+                    if detail:
+                        print(f"\033[2m  [{name}] {detail}\033[0m")
+                    else:
+                        print(f"\033[2m  [{name}]\033[0m")
+
+        # Final result
+        elif etype == "result":
+            if spinning:
+                spinner.stop()
+                spinning = False
+            result_text = event.get("result", "")
+            if result_text:
+                print(result_text)
+
+    if spinning:
         spinner.stop()
 
-    stderr = proc.stderr.read()
-    if proc.returncode != 0 and stderr:
-        print(f"\033[31m{stderr.strip()}\033[0m", file=sys.stderr)
+    proc.wait()
 
 
 def main():
