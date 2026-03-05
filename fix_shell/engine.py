@@ -55,12 +55,12 @@ def correct_command(config, failed_cmd, stderr):
             return None, "error", "", elapsed
     elapsed = int((time.monotonic() - t0) * 1000)
 
-    if result == "UNKNOWN" or not result:
-        return None, used, used_model, elapsed
-
     result = result.strip("`").strip()
     if "\n" in result:
         result = result.split("\n")[0]
+
+    if not result or result.upper() == "UNKNOWN":
+        return None, used, used_model, elapsed
 
     return result, used, used_model, elapsed
 
@@ -84,12 +84,12 @@ def translate_natural_language(config, query):
         return None, provider, model, elapsed
     elapsed = int((time.monotonic() - t0) * 1000)
 
-    if result == "UNKNOWN" or not result:
-        return None, provider, model, elapsed
-
     result = result.strip("`").strip()
     if "\n" in result:
         result = result.split("\n")[0]
+
+    if not result or result.upper() == "UNKNOWN":
+        return None, provider, model, elapsed
 
     return result, provider, model, elapsed
 
