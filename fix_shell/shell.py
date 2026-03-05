@@ -64,11 +64,17 @@ __fix_cleanup() {{
 }}
 add-zsh-hook zshexit __fix_cleanup
 
-# Natural language: ? <query>
+# Natural language: ? <query> (single command)
 __fix_nl() {{
     {fix_nl_cmd} "$*"
 }}
 alias '?'='noglob __fix_nl'
+
+# Long mode: ?? <query> (full claude code session)
+__fix_long() {{
+    {fix_long_cmd} "$*"
+}}
+alias '??'='noglob __fix_long'
 """
 
 
@@ -86,6 +92,8 @@ def launch_fix_shell(config: dict):
 
     fix_nl_cmd = f'{fix_bin} --nl-provider {config["nl_provider"]} --nl-model {config["nl_model"]} --nl-timeout {config["nl_timeout"]}{key_flag}'
 
+    fix_long_cmd = f'{fix_bin} --long'
+
     user_zshrc = os.path.expanduser("~/.zshrc")
 
     tmpdir = tempfile.mkdtemp(prefix="fix_shell_")
@@ -98,6 +106,7 @@ def launch_fix_shell(config: dict):
             user_zshrc=user_zshrc,
             fix_cmd=fix_cmd,
             fix_nl_cmd=fix_nl_cmd,
+            fix_long_cmd=fix_long_cmd,
             icon=icon,
         ))
 
@@ -106,9 +115,10 @@ def launch_fix_shell(config: dict):
     env["FIX_MODE"] = "1"
     env.pop("CLAUDECODE", None)
 
-    print("\033[2mfix mode \u2014 ? <query> for natural language, exit to leave\033[0m")
-    print(f'\033[2m  autocorrect: {config["ac_provider"]}/{config["ac_model"]} (autoaccept: {config["ac_timeout"]}s)\033[0m')
-    print(f'\033[2m  natural language: {config["nl_provider"]}/{config["nl_model"]} (autoaccept: {config["nl_timeout"]}s)\033[0m')
+    print("\033[31m✦\033[33m✧\033[32m✦\033[34m✧\033[35m✦\033[0m \033[1mfix mode\033[0m \033[35m✦\033[34m✧\033[32m✦\033[33m✧\033[31m✦\033[0m")
+    print(f'\033[2m  ?  natural language \u2192 single command ({config["nl_provider"]}/{config["nl_model"]}, {config["nl_timeout"]}s)\033[0m')
+    print(f'\033[2m  ?? full claude code session\033[0m')
+    print(f'\033[2m  ~  autocorrect on error ({config["ac_provider"]}/{config["ac_model"]}, {config["ac_timeout"]}s)\033[0m')
 
     try:
         result = subprocess.run(

@@ -36,6 +36,8 @@ def parse_args():
     parser.add_argument("--icon", "-i", help="Prompt icon")
     parser.add_argument("--correct", nargs=argparse.REMAINDER,
                         help=argparse.SUPPRESS)
+    parser.add_argument("--long", nargs=argparse.REMAINDER,
+                        help=argparse.SUPPRESS)
     parser.add_argument("query", nargs="*", help="Natural language query (one-shot mode)")
     return parser.parse_args()
 
@@ -79,10 +81,53 @@ def apply_overrides(config: dict, args) -> dict:
     return config
 
 
+def run_long_mode(query):
+    """Run a full claude code session with a spinner until first output."""
+    import subprocess
+    import threading
+
+    env = os.environ.copy()
+    env.pop("CLAUDECODE", None)
+
+    proc = subprocess.Popen(
+        ["claude", "-p", "--dangerously-skip-permissions", query],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+    )
+
+    # Show spinner until we get first output
+    spinner = Spinner("thinking...")
+    spinner.start()
+    first_chunk = True
+
+    for line in proc.stdout:
+        if first_chunk:
+            spinner.stop()
+            first_chunk = False
+        print(line, end="")
+
+    proc.wait()
+    if first_chunk:
+        spinner.stop()
+
+    stderr = proc.stderr.read()
+    if proc.returncode != 0 and stderr:
+        print(f"\033[31m{stderr.strip()}\033[0m", file=sys.stderr)
+
+
 def main():
     args = parse_args()
     config = load_config()
     config = apply_overrides(config, args)
+
+    if args.long is not None:
+        query = " ".join(args.long)
+        if not query:
+            sys.exit(1)
+        run_long_mode(query)
+        sys.exit(0)
 
     if args.correct is not None:
         parts = args.correct
