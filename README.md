@@ -12,6 +12,55 @@ Your terminal stays yours — fix just makes it smarter.
 
 ![demo](demo.gif)
 
+## How it works
+
+fix is a thin layer on top of your real zsh. It stays invisible until a command fails or you use `?` / `??`. Everything else passes through untouched.
+
+```
+  ┌─────────────────────────────┐
+  │         You type...         │
+  │   owd / ? list files / ??  │
+  └──────────────┬──────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────┐
+  │      fix layer (zsh hooks)  │
+  │                             │
+  │  normal cmd ──→ pass through│
+  │  failed cmd ──→ auto-correct│
+  │  ? query   ──→ NL translate │
+  │  ?? query  ──→ claude code  │
+  └──────┬──────────┬───────────┘
+         │          │
+         │          │ only activates on
+         │          │ failure, ? or ??
+         │          │
+         │    ┌─────▼─────────┐
+         │    │   LLM layer   │
+         │    │               │
+         │    │ groq (fast)   │◄── auto-correct
+         │    │ claude (smart)│◄── NL / long mode
+         │    │               │
+         │    └─────┬─────────┘
+         │          │
+         │   corrected / translated cmd
+         │          │
+         ▼          ▼
+  ┌─────────────────────────────┐
+  │       your real zsh         │
+  │                             │
+  │  colors, prompt, history,   │
+  │  tab completion, ctrl+r     │
+  │  — all untouched            │
+  └──────────────┬──────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────┐
+  │     stdout / stderr         │
+  │     back to you             │
+  └─────────────────────────────┘
+```
+
 ## Examples
 
 ### Auto-correct failed commands
