@@ -10,6 +10,8 @@ With modern development tools like Claude Code, the development cycle moves back
 
 Your terminal stays yours — fix just makes it smarter.
 
+![demo](demo.gif)
+
 ## Examples
 
 ### Auto-correct failed commands
