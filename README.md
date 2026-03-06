@@ -1,5 +1,10 @@
 # fix
 
+- [How it works](#how-it-works)
+- [Examples](#examples)
+- [Installation](#installation)
+- [Usage](#usage)
+
 With modern development tools like Claude Code, the development cycle moves back to the terminal. But spinning up Claude Code for every small task feels heavy — what if there was a more seamless integration between your terminal and AI, without touching your color scheme, prompt, completions, or any other zsh settings?
 
 **fix** does exactly that. It wraps your existing zsh in a thin AI layer:
